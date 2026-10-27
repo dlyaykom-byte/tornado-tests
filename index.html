@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Спаси дом от торнадо</title>
+    <style>
+        :root {
+            --bg-start: #2b2b3a;
+            --bg-end: #3a2b4a;
+            --card-bg: rgba(255, 255, 255, 0.1);
+            --text-primary: #f0f0f0;
+            --text-secondary: #a0a0b0;
+            --border-radius: 16px;
+            --success: #4ade80;
+            --error: #f87171;
+            --warning: #fbbf24;
+            --accent: #60a5fa;
+            --dropzone-bg-true: rgba(74, 222, 128, 0.2);
+            --dropzone-bg-false: rgba(248, 113, 113, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        .attempts-counter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            border-radius: 25px;
+            backdrop-filter: blur(5px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 10px;
+            z-index: 10;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            margin-bottom: 8px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.5);
+        }
+
+        h2 {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .scene-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            width: 100%;
+            max-width: 900px;
+            margin: 30px 0;
+            position: relative;
+            z-index: 5;
+        }
+
+        .scene-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+        }
+
+        .tornado {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            width: 80px;
+            height: 200px;
+            transform: translateX(-50%);
+            animation: spin 8s linear infinite;
+        }
+
+        .tornado-cone {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-left: 40px solid transparent;
+            border-right: 40px solid transparent;
+            border-bottom: 150px solid #60a5fa;
+            transform: translateX(-50%);
+            opacity: 0.8;
+        }
+
+        .tornado-swirl {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border: 2px solid #93c5fd;
+            border-radius: 50%;
+            opacity: 0.2;
+        }
+
+        .tornado-swirl:nth-child(2) { width: 80%; height: 80%; top: 10%; left: 10%; border-color: #60a5fa; }
+        .tornado-swirl:nth-child(3) { width: 60%; height: 60%; top: 20%; left: 20%; border-color: #3b82f6; }
+
+        .house {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            width: 120px;
+            height: 110px;
+            transform: translateX(-50%);
+            z-index: 2;
+        }
+
+        .house-walls {
+            width: 100%;
+            height: 60px;
+            background: #f3f4f6;
+            border: 3px solid #333;
+            border-radius: 10px 10px 0 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .house-roof {
+            width: 120px;
+            height: 50px;
+            background: #ef4444;
+            border: 3px solid #333;
+            clip-path: polygon(50% 0%, 100% 100%, 0% 100%);
+            position: absolute;
+            top: -50px;
+            left: 0;
+        }
+
+        .house-window {
+            position: absolute;
+            background: #22c55e;
+            border: 2px solid #15803d;
+        }
+        .house-window:nth-child(1) { width: 20px; height: 20px; top: 25px; left: 20px; }
+        .house-window:nth-child(2) { width: 20px; height: 20px; top: 25px; right: 20px; }
+
+        .house-door {
+            position: absolute;
+            width: 24px;
+            height: 35px;
+            background: #9ca3af;
+            border: 2px solid #4b5563;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 0 0 5px 5px;
+        }
+
+        .house-chimney {
+            position: absolute;
+            width: 15px;
+            height: 30px;
+            background: #6b7280;
+            top: -35px;
+            right: 15px;
+            border: 2px solid #333;
+        }
+
+        .current-item-container {
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .current-item {
+            background: var(--card-bg);
+            border: 3px solid var(--accent);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            min-height: 70px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            cursor: grab;
+            user-select: none;
+            animation: dropIn 0.4s ease;
+            position: relative;
+        }
+
+        .current-item:active {
+            cursor: grabbing;
+            transform: scale(0.98);
+        }
+
+        .current-item.myth {
+            border-color: var(--error);
+        }
+
+        .current-item.fact {
+            border-color: var(--success);
+        }
+
+        .dropzones {
+            display: flex;
+            width: 100%;
+            justify-content: space-around;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .dropzone {
+            flex: 1;
+            min-width: 250px;
+            padding: 30px 15px;
+            border: 3px dashed #555;
+            border-radius: var(--border-radius);
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 600;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        .dropzone.true-zone {
+            border-color: var(--success);
+            background: var(--dropzone-bg-true);
+        }
+
+        .dropzone.false-zone {
+            border-color: var(--error);
+            background: var(--dropzone-bg-false);
+        }
+
+        .dropzone.hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-style: solid;
+            transform: scale(1.02);
+        }
+
+        .dropzone-title {
+            font-size: 1.3rem;
+            color: white;
+            margin-bottom: 10px;
+        }
+
+        .dropzone-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1;
+        }
+
+        .draggable-item {
+            background: var(--card-bg);
+            border: 2px solid var(--text-secondary);
+            border-radius: var(--border-radius);
+            padding: 15px;
+            font-size: 1.1rem;
+            text-align: center;
+            cursor: grab;
+            user-select: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .draggable-item:active {
+            cursor: grabbing;
+            transform: scale(0.98);
+        }
+
+        .draggable-item.correct-user {
+            border-color: var(--success);
+            background: rgba(74, 222, 128, 0.2);
+        }
+
+        .draggable-item.error {
+            border-color: var(--error);
+            background: rgba(248, 113, 113, 0.2);
+        }
+
+        .feedback-score {
+            font-size: 1.3rem;
+            font-weight: 700;
+            text-align: center;
+            margin-top: 20px;
+            color: var(--text-primary);
+        }
+
+        .error-review {
+            width: 100%;
+            max-width: 700px;
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #4b5563;
+            border-radius: var(--border-radius);
+            padding: 20px;
+            margin-top: 30px;
+            display: none;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .error-item {
+            background: #2d3748;
+            padding: 15px;
+            border-radius: var(--border-radius);
+            border-left: 5px solid var(--error);
+        }
+
+        .error-item h4 {
+            margin: 0 0 10px 0;
+            color: var(--text-primary);
+        }
+
+        .error-item p {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .footer-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            background: rgba(20, 20, 30, 0.9);
+            border-top: 1px solid #4b5563;
+            padding: 15px 20px;
+            z-index: 20;
+        }
+
+        .footer-btn {
+            padding: 16px 40px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border: none;
+            border-radius: var(--border-radius);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-height: 56px;
+        }
+
+        .footer-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .footer-btn.reset {
+            background: #4b5563;
+            color: white;
+        }
+
+        .footer-btn.check {
+            background: var(--accent);
+            color: white;
+            margin-left: 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: translateX(-50%) rotate(0deg); }
+            100% { transform: translateX(-50%) rotate(360deg); }
+        }
+
+        @keyframes dropIn {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 768px) {
+            .dropzones { flex-direction: column; }
+            .dropzone { min-height: 120px; }
+            .footer-nav { flex-direction: column; gap: 10px; }
+            .footer-btn.check { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="attempts-counter" id="attemptsCounter">Попытка: 1</div>
+
+    <div class="header">
+        <h1>Спаси дом от торнадо</h1>
+        <h2>Разместите утверждение в правильную зону</h2>
+    </div>
+
+    <div class="scene-wrapper">
+        <div class="scene-container">
+            <div class="tornado">
+                <div class="tornado-cone"></div>
+                <div class="tornado-swirl"></div>
+                <div class="tornado-swirl"></div>
+                <div class="tornado-swirl"></div>
+            </div>
+            <div class="house">
+                <div class="house-roof"></div>
+                <div class="house-walls">
+                    <div class="house-window"></div>
+                    <div class="house-window"></div>
+                </div>
+                <div class="house-door"></div>
+                <div class="house-chimney"></div>
+            </div>
+        </div>
+
+        <div class="current-item-container">
+            <div class="current-item" id="currentItem" draggable="true"></div>
+        </div>
+
+        <div class="dropzones">
+            <div class="dropzone true-zone" id="dropzone-true">
+                <div class="dropzone-title">Правда: Меры защиты</div>
+                <div class="dropzone-items" id="items-true"></div>
+            </div>
+            <div class="dropzone false-zone" id="dropzone-false">
+                <div class="dropzone-title">Ложь: Мифы и опасности</div>
+                <div class="dropzone-items" id="items-false"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="feedback-score" id="feedbackScore"></div>
+
+    <div class="error-review" id="errorReview">
+        <h3 style="text-align: center; color: var(--error);">Разбор ошибок:</h3>
+        <div id="errorList"></div>
+    </div>
+
+    <div class="footer-nav">
+        <button class="footer-btn reset" id="resetBtn">Начать заново</button>
+        <button class="footer-btn check" id="checkBtn">Проверить всё</button>
+    </div>
+
+    <script>
+        // ОБНОВЛЕННАЯ БАЗА ДАННЫХ (10 утверждений)
+        const optionsData = [
+            // Правда (Зеленая зона)
+            {id: 'opt1', text: 'Спуститься в подвал или сесть в ванной без окон', isCorrect: true, explanation: 'Это самая прочная часть дома, защищающая от летящих обломков.'},
+            {id: 'opt2', text: 'Лечь на пол и накрыть голову руками', isCorrect: true, explanation: 'Минимизирует площадь поражения от разбитого стекла.'},
+            {id: 'opt3', text: 'Отключить электричество и перекрыть газ', isCorrect: true, explanation: 'Предотвращает пожар и взрыв из-за поврежденных коммуникаций.'},
+            {id: 'opt4', text: 'Закрыть окна и держаться подальше от них', isCorrect: true, explanation: 'Предотвращает эффект сквозняка и защищает от осколков.'},
+            {id: 'opt5', text: 'Скорость ветра в торнадо оценивают по шкале Фудзиты', isCorrect: true, explanation: 'Это научный факт из досье. Шкала от F0 до F5.'},
+            
+            // Ложь (Красная зона)
+            {id: 'opt6', text: 'Открыть все окна, чтобы давление внутри и снаружи сравнялось', isCorrect: false, explanation: 'Опасный миф. Это создаст сквозняк, дом разрушится, а обломки полетят внутрь.'},
+            {id: 'opt7', text: 'Попытаться уехать от торнадо на машине', isCorrect: false, explanation: 'Опасно. Торнадо движется непредсказуемо, машину может поднять в воздух.'},
+            {id: 'opt8', text: 'Спрятаться под мостом или путепроводом', isCorrect: false, explanation: 'Миф. Под мостом образуется аэродинамическая труба, где ветер только усиливается.'},
+            {id: 'opt9', text: 'Если вода от берега внезапно отступила — это верный признак скорого торнадо', isCorrect: false, explanation: 'Путаница явлений. Отлив — это главный признак ЦУНАМИ.'},
+            {id: 'opt10', text: 'Внутри воронки давление настолько высокое, что сплющивает дома', isCorrect: false, explanation: 'Ошибка. Внутри воронки давление резко падает, поэтому дома "взрывает" изнутри.'}
+        ];
+
+        let attemptCount = 1;
+        let currentQuestionIndex = 0;
+        let userAnswers = [];
+        let draggedElement = null;
+
+        const attemptsCounter = document.getElementById('attemptsCounter');
+        const currentItem = document.getElementById('currentItem');
+        const dropzoneTrue = document.getElementById('dropzone-true');
+        const dropzoneFalse = document.getElementById('dropzone-false');
+        const itemsTrue = document.getElementById('items-true');
+        const itemsFalse = document.getElementById('items-false');
+        const feedbackScore = document.getElementById('feedbackScore');
+        const resetBtn = document.getElementById('resetBtn');
+        const checkBtn = document.getElementById('checkBtn');
+        const errorReview = document.getElementById('errorReview');
+        const errorList = document.getElementById('errorList');
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function renderQuestion() {
+            if (currentQuestionIndex >= optionsData.length) {
+                showFinalResults();
+                return;
+            }
+
+            const item = optionsData[currentQuestionIndex];
+            currentItem.textContent = item.text;
+            currentItem.className = 'current-item ' + (item.isCorrect ? 'fact' : 'myth');
+            currentItem.setAttribute('data-id', item.id);
+            currentItem.draggable = true;
+        }
+
+        function setupDragEvents() {
+            // Источник
+            currentItem.removeEventListener('dragstart', handleDragStart);
+            currentItem.removeEventListener('dragend', handleDragEnd);
+            currentItem.addEventListener('dragstart', handleDragStart);
+            currentItem.addEventListener('dragend', handleDragEnd);
+
+            // Зоны
+            [dropzoneTrue, dropzoneFalse].forEach(zone => {
+                zone.removeEventListener('dragover', handleDragOver);
+                zone.removeEventListener('dragleave', handleDragLeave);
+                zone.removeEventListener('drop', handleDrop);
+                
+                zone.addEventListener('dragover', handleDragOver);
+                zone.addEventListener('dragleave', handleDragLeave);
+                zone.addEventListener('drop', handleDrop);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedElement = this;
+            e.dataTransfer.effectAllowed = 'move';
+            const img = new Image();
+            img.src = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+            e.dataTransfer.setDragImage(img, 0, 0);
+            this.style.opacity = '0.5';
+        }
+
+        function handleDragEnd(e) {
+            this.style.opacity = '1';
+            draggedElement = null;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            this.classList.add('hover');
+            e.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDragLeave(e) {
+            this.classList.remove('hover');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            this.classList.remove('hover');
+
+            if (draggedElement && draggedElement.id === 'currentItem') {
+                const itemData = optionsData[currentQuestionIndex];
+                const isTrueZone = this.id === 'dropzone-true';
+
+                const fixedCard = document.createElement('div');
+                fixedCard.className = 'draggable-item';
+                fixedCard.textContent = itemData.text;
+                
+                if (itemData.isCorrect === isTrueZone) {
+                    fixedCard.classList.add('correct-user');
+                } else {
+                    fixedCard.classList.add('error');
+                }
+
+                this.querySelector('.dropzone-items').appendChild(fixedCard);
+
+                userAnswers.push({
+                    id: itemData.id,
+                    isCorrect: itemData.isCorrect,
+                    placedInTrue: isTrueZone
+                });
+
+                currentQuestionIndex++;
+                renderQuestion();
+                setupDragEvents();
+            }
+        }
+
+        function showFinalResults() {
+            currentItem.style.display = 'none';
+            
+            let correctCount = userAnswers.filter(a => 
+                (a.isCorrect && a.placedInTrue) || (!a.isCorrect && !a.placedInTrue)
+            ).length;
+
+            feedbackScore.textContent = `Верно распределено: ${correctCount} из ${optionsData.length}`;
+            feedbackScore.style.display = 'block';
+            checkBtn.style.display = 'none';
+
+            const errors = userAnswers.filter(a => 
+                (a.isCorrect && !a.placedInTrue) || (!a.isCorrect && a.placedInTrue)
+            );
+
+            if (errors.length > 0) {
+                errorReview.style.display = 'flex';
+                errorList.innerHTML = '';
+                errors.forEach(err => {
+                    const data = optionsData.find(o => o.id === err.id);
+                    const errorDiv = document.createElement('div');
+                    errorDiv.className = 'error-item';
+                    errorDiv.innerHTML = `<h4>${data.text}</h4><p>${data.explanation}</p>`;
+                    errorList.appendChild(errorDiv);
+                });
+            }
+        }
+
+        function resetQuiz() {
+            attemptCount++;
+            attemptsCounter.textContent = `Попытка: ${attemptCount}`;
+            
+            currentQuestionIndex = 0;
+            userAnswers = [];
+            
+            itemsTrue.innerHTML = '';
+            itemsFalse.innerHTML = '';
+            feedbackScore.style.display = 'none';
+            errorReview.style.display = 'none';
+            
+            currentItem.style.display = 'block';
+
+            shuffle(optionsData);
+
+            renderQuestion();
+            setupDragEvents();
+        }
+
+        checkBtn.addEventListener('click', showFinalResults);
+        resetBtn.addEventListener('click', resetQuiz);
+
+        // Инициализация
+        shuffle(optionsData);
+        renderQuestion();
+        setupDragEvents();
+    </script>
+</body>
+</html>
